@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="60天打卡">
+<meta name="theme-color" content="#f7f5f1">
+<title>60天健身打卡</title>
+<style>
+  :root {
+    --bg: #f7f5f1;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --muted: #6f6a64;
+    --line: #e3dfd8;
+    --accent: #e57b5a;
+    --accent-soft: #ffe9df;
+    --done: #4a8f6c;
+    --done-soft: #d8ecdf;
+    --adapt: #f4d3dc;
+    --peak: #f4dcb1;
+    --shape: #c9e3cf;
+    --rest: #dcdce2;
+    --milestone: #f5d36b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    overscroll-behavior-y: none;
+  }
+  body {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 12px 12px max(24px, env(safe-area-inset-bottom));
+  }
+
+  /* === Header === */
+  .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 4px 12px;
+  }
+  .head h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
+  .head .gear {
+    background: none; border: none; font-size: 20px; padding: 4px 8px;
+    color: var(--muted); cursor: pointer;
+  }
+  .progress-wrap {
+    background: var(--card); border-radius: 14px; padding: 12px 14px;
+    margin-bottom: 12px; border: 1px solid var(--line);
+  }
+  .progress-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; color: var(--muted); margin-bottom: 6px;
+  }
+  .progress-top b { font-size: 17px; color: var(--ink); margin-right: 4px; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar > i {
+    display: block; height: 100%; background: var(--accent);
+    transition: width 0.3s;
+  }
+
+  /* === Card === */
+  .card {
+    background: var(--card); border-radius: 18px; padding: 16px 16px 12px;
+    border: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .card-top {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 12px;
+  }
+  .card-top .day-info { display: flex; align-items: baseline; gap: 8px; }
+  .card-top .day-num { font-size: 22px; font-weight: 700; }
+  .card-top .day-sub { font-size: 13px; color: var(--muted); }
+  .pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 100px;
+    background: var(--line); color: var(--ink);
+  }
+  .pill.adapt { background: var(--adapt); }
+  .pill.peak { background: var(--peak); }
+  .pill.shape { background: var(--shape); }
+  .pill.rest { background: var(--rest); }
+  .pill.milestone {
+    background: var(--milestone); color: #5a3f00; font-weight: 700;
+  }
+
+  .section-title {
+    font-size: 13px; color: var(--muted); margin: 14px 0 8px;
+    display: flex; align-items: center; gap: 6px; font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .section-title .ic { font-size: 14px; }
+
+  .title-line { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+
+  /* === Checklist items === */
+  .checklist { list-style: none; margin: 0; padding: 0; }
+  .checklist li {
+    padding: 9px 0; border-bottom: 1px solid var(--line);
+    display: flex; align-items: flex-start; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li .box {
+    flex: 0 0 22px; height: 22px; border-radius: 6px;
+    border: 1.5px solid var(--ink); margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: transparent;
+    transition: all 0.15s;
+  }
+  .checklist li.done .box {
+    background: var(--ink); color: #fff; border-color: var(--ink);
+  }
+  .checklist li.done .lbl { color: var(--muted); text-decoration: line-through; }
+  .checklist li .lbl {
+    flex: 1; font-size: 15px; line-height: 1.4;
+  }
+  .checklist li .lbl small {
+    display: block; color: var(--muted); font-size: 12px; margin-top: 2px;
+  }
+
+  /* meals: same checklist with prefix */
+  .meal-prefix {
+    display: inline-block; min-width: 28px; padding: 1px 6px; margin-right: 4px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 6px; font-size: 11px; text-align: center;
+    font-weight: 700; vertical-align: 2px;
+  }
+
+  /* === Master daily checks (4 大块) === */
+  .master {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+    margin-top: 12px;
+  }
+  .master button {
+    appearance: none; border: 1.5px solid var(--line); background: var(--card);
+    padding: 10px 8px; border-radius: 12px; font-size: 14px;
+    font-family: inherit; color: var(--ink); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.15s;
+  }
+  .master button.done {
+    background: var(--done-soft); color: var(--done);
+    border-color: var(--done-soft); font-weight: 600;
+  }
+  .master button .ic { font-size: 16px; }
+
+  /* tip */
+  .tip {
+    background: var(--accent-soft); color: #874c34;
+    padding: 10px 12px; border-radius: 12px; font-size: 13px;
+    margin-top: 12px; line-height: 1.5;
+  }
+  .tip.milestone {
+    background: #fff4d4; color: #6f4f00;
+  }
+
+  /* big "完成今日" button */
+  .complete-btn {
+    width: 100%; margin-top: 14px; padding: 14px;
+    background: var(--ink); color: #fff;
+    border: none; border-radius: 14px; font-size: 16px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .complete-btn:disabled { background: var(--line); color: var(--muted); cursor: default; }
+  .complete-btn.done { background: var(--done); }
+
+  /* === Calendar === */
+  .cal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 8px 4px 8px;
+  }
+  .cal-head h2 { font-size: 14px; margin: 0; color: var(--muted); font-weight: 600; }
+  .cal-head .legend {
+    display: flex; gap: 8px; font-size: 11px; color: var(--muted);
+  }
+  .cal-head .legend i {
+    display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+    margin-right: 3px; vertical-align: middle;
+  }
+  .calendar {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
+    margin-bottom: 12px;
+  }
+  .day-cell {
+    aspect-ratio: 1; background: var(--card);
+    border: 1.5px solid var(--line); border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    position: relative; padding: 2px; line-height: 1.1;
+    transition: transform 0.1s;
+  }
+  .day-cell:active { transform: scale(0.94); }
+  .day-cell.adapt { border-color: var(--adapt); }
+  .day-cell.peak { border-color: var(--peak); }
+  .day-cell.shape { border-color: var(--shape); }
+  .day-cell.rest { border-color: var(--rest); border-style: dashed; }
+  .day-cell.complete { background: var(--done-soft); border-color: var(--done); color: var(--done); }
+  .day-cell.complete::after {
+    content: "✓"; position: absolute; top: 2px; right: 4px;
+    font-size: 10px; color: var(--done);
+  }
+  .day-cell.today {
+    box-shadow: 0 0 0 2px var(--accent);
+    background: var(--accent-soft);
+  }
+  .day-cell.selected {
+    box-shadow: 0 0 0 2px var(--ink);
+  }
+  .day-cell.future { color: var(--muted); }
+  .day-cell .ms-star { font-size: 8px; position: absolute; top: 2px; left: 4px; color: #c98a00; }
+
+  /* === Setup screen === */
+  .setup {
+    max-width: 480px; margin: 40px auto; padding: 24px;
+    background: var(--card); border-radius: 18px; border: 1px solid var(--line);
+  }
+  .setup h2 { margin-top: 0; font-size: 22px; }
+  .setup p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .setup label { display: block; font-size: 14px; margin-top: 14px; color: var(--muted); }
+  .setup input[type="date"] {
+    width: 100%; padding: 12px; font-size: 16px; margin-top: 6px;
+    border: 1.5px solid var(--line); border-radius: 10px;
+    background: var(--bg); font-family: inherit; color: var(--ink);
+  }
+  .setup .start-btn {
+    width: 100%; margin-top: 20px; padding: 14px;
+    background: var(--ink); color: #fff; border: none;
+    border-radius: 12px; font-size: 16px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+  }
+  .setup .summary {
+    background: var(--bg); padding: 12px 14px; border-radius: 10px;
+    margin-top: 14px; font-size: 13px; color: var(--ink); line-height: 1.7;
+  }
+  .setup .summary b { color: var(--accent); }
+
+  /* === Modal (settings) === */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal {
+    background: var(--card); border-radius: 16px; padding: 20px;
+    max-width: 360px; width: 100%;
+  }
+  .modal h3 { margin: 0 0 12px 0; font-size: 17px; }
+  .modal p { font-size: 13px; color: var(--muted); margin: 8px 0; }
+  .modal .row {
+    display: flex; gap: 8px; margin-top: 14px;
+  }
+  .modal button {
+    flex: 1; padding: 12px; border-radius: 10px; font-family: inherit;
+    font-size: 14px; cursor: pointer; border: 1.5px solid var(--line);
+    background: var(--card); color: var(--ink);
+  }
+  .modal button.danger { background: #e85a4f; color: #fff; border-color: #e85a4f; }
+  .modal button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .modal input[type="date"] {
+    width: 100%; padding: 10px; font-size: 15px; margin-top: 6px;
+    border: 1.5px solid var(--line); border-radius: 8px;
+    font-family: inherit; background: var(--bg);
+  }
+
+  /* footer */
+  .foot { text-align: center; color: var(--muted); font-size: 11px; padding: 16px 4px 0; }
+
+  @media (max-width: 380px) {
+    body { font-size: 15px; padding: 10px 10px max(20px, env(safe-area-inset-bottom)); }
+    .calendar { gap: 5px; }
+    .day-cell { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+//=================== DATA ===================
+const workouts = {
+  legs: {
+    adapt: { title: "下肢 + 臀（适应）", items: [
+      "高脚杯深蹲 3×12（单哑铃抱胸）",
+      "臀桥 3×15（哑铃压髋）",
+      "哑铃罗马尼亚硬拉 3×10",
+      "保加利亚分腿蹲 2×10/腿（后脚搭椅）",
+      "侧抬腿 3×15/侧",
+      "低冲击有氧 15 分钟（快走 / 原地踏步 / 骑车）"
+    ]},
+    peak: { title: "下肢 + 臀（攻坚）", items: [
+      "高脚杯深蹲 4×12",
+      "单腿臀桥 4×12/腿（哑铃压髋）",
+      "哑铃罗马尼亚硬拉 4×10",
+      "保加利亚分腿蹲 3×10/腿（手持哑铃）",
+      "侧抬腿 3×20/侧",
+      "低冲击有氧 20 分钟（快走 / 原地踏步 / 骑车）"
+    ]},
+    shape: { title: "下肢 + 臀（塑形）", items: [
+      "高脚杯深蹲（加重）4×10",
+      "臀桥 4×12（哑铃压髋，慢速 3 秒下）",
+      "哑铃罗马尼亚硬拉 4×10",
+      "保加利亚分腿蹲 3×12/腿（手持哑铃）",
+      "蚌式开合 3×15/侧",
+      "低冲击有氧 15–20 分钟（能说话但微喘）"
+    ]}
+  },
+  upper: {
+    adapt: { title: "上肢 + 核心（适应）", items: [
+      "哑铃地板卧推 / 跪姿俯卧撑 3×10",
+      "俯身哑铃划船 3×12",
+      "哑铃站姿推举 3×10",
+      "哑铃过顶臂屈伸 3×12",
+      "平板支撑 3×30 秒",
+      "死虫式 3×10",
+      "低冲击有氧 15 分钟（可选）"
+    ]},
+    peak: { title: "上肢 + 核心（攻坚）", items: [
+      "哑铃地板卧推 / 俯卧撑 4×10",
+      "俯身哑铃划船 4×12",
+      "哑铃站姿推举 4×10",
+      "哑铃侧平举 3×12",
+      "哑铃过顶臂屈伸 3×12",
+      "平板支撑 3×45 秒",
+      "死虫式 / 鸟狗 3×12"
+    ]},
+    shape: { title: "上肢 + 核心（塑形）", items: [
+      "哑铃地板卧推 / 俯卧撑（加重）4×8",
+      "俯身哑铃划船（加重）4×10",
+      "哑铃站姿推举（加重）4×8",
+      "哑铃侧平举 3×12",
+      "哑铃过顶臂屈伸 3×12",
+      "平板支撑 3×60 秒",
+      "死虫式 3×15"
+    ]}
+  },
+  hiit: {
+    adapt: { title: "HIIT 跳绳（适应）", items: [
+      "热身慢跳 3 分钟",
+      "快跳 20s + 慢跳 40s × 8 轮",
+      "小腿不适则换：原地快走 30s + 慢走 30s × 8",
+      "拉伸小腿 5 分钟"
+    ]},
+    peak: { title: "HIIT 跳绳（攻坚）", items: [
+      "热身慢跳 3 分钟",
+      "快跳 20s + 慢跳 40s × 10 轮",
+      "交替脚跳 30s × 2（动作稳再做）",
+      "拉伸小腿 + 大腿 5 分钟"
+    ]},
+    shape: { title: "HIIT 跳绳（塑形）", items: [
+      "热身慢跳 3 分钟",
+      "快跳 30s + 慢跳 30s × 8–10 轮",
+      "交替脚跳 1 分钟 × 2（可选）",
+      "如果膝/踝疼，改骑车或快走间歇 12 分钟",
+      "拉伸小腿 + 大腿 5 分钟"
+    ]}
+  },
+  fullbody: {
+    adapt: { title: "全身循环（适应）", items: [
+      "徒手深蹲",
+      "哑铃罗马尼亚硬拉",
+      "哑铃地板卧推 / 跪姿俯卧撑",
+      "俯身哑铃划船",
+      "平板支撑",
+      "→ 35s 做 / 25s 休 × 3–4 轮"
+    ]},
+    peak: { title: "全身循环（攻坚）", items: [
+      "高脚杯深蹲",
+      "哑铃罗马尼亚硬拉",
+      "哑铃地板卧推 / 俯卧撑",
+      "俯身哑铃划船",
+      "平板支撑 / 死虫式",
+      "→ 40s 做 / 20s 休 × 4–5 轮"
+    ]},
+    shape: { title: "全身循环（塑形）", items: [
+      "高脚杯深蹲（加重）",
+      "哑铃罗马尼亚硬拉（加重）",
+      "哑铃地板卧推 / 俯卧撑",
+      "站姿单臂哑铃划船",
+      "持哑铃俄罗斯转体",
+      "侧平板（左右各一组）",
+      "→ 40s 做 / 20s 休 × 5 轮"
+    ]}
+  },
+  rest: {
+    all: { title: "主动恢复 / 拉伸日", items: [
+      "轻松散步 / 室内走动 20–30 分钟",
+      "瑜伽 / 全身拉伸 20 分钟",
+      "泡沫轴放松小腿 + 大腿 10 分钟",
+      "睡眠 ≥ 7.5 小时",
+      "今天不强求训练，恢复即进步"
+    ]}
+  }
+};
+
+const meals = {
+  legsA: {
+    adapt: ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉100g + 西红柿炒蛋 + 馒头1", "香蕉1（练前30min）", "牛肉80g + 竹笋 + 红薯1"],
+    peak:  ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉120g + 西红柿炒蛋 + 玉米½根", "香蕉1（练前30min）", "牛肉80g + 竹笋 + 红薯1"],
+    shape: ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉130g + 西红柿炒蛋 + 玉米½根", "香蕉1（练前30min）", "牛肉80g + 竹笋 + 红薯½"]
+  },
+  upperA: {
+    adapt: ["鸡蛋2 + 馒头1 + 苹果1", "鸡腿肉120g + 竹笋 + 土豆1", "鸡蛋1 + 香蕉1（练后）", "西红柿鸡蛋汤 + 鸡腿肉60g"],
+    peak:  ["鸡蛋2 + 馒头1 + 苹果1", "鸡腿肉130g + 竹笋 + 土豆1", "鸡蛋1 + 香蕉1（练后）", "西红柿鸡蛋汤 + 鸡腿肉80g"],
+    shape: ["鸡蛋2 + 馒头½ + 苹果1", "鸡腿肉140g + 竹笋 + 土豆½", "鸡蛋1（练后）",          "西红柿鸡蛋汤 + 鸡腿肉80g"]
+  },
+  hiit: {
+    adapt: ["燕麦片 40g + 鸡蛋2 + 香蕉1（练前）", "牛肉100g + 西红柿 + 馒头1", "橘子1 + 鸡蛋1", "鸡腿肉80g + 竹笋 + 红薯½"],
+    peak:  ["燕麦片 40g + 鸡蛋2 + 香蕉1（练前）", "牛肉120g + 西红柿 + 玉米1根", "橘子1 + 鸡蛋1", "鸡腿肉80g + 竹笋 + 红薯½"],
+    shape: ["燕麦片 40g + 鸡蛋2 + 香蕉1（练前）", "牛肉130g + 西红柿 + 玉米½根", "橘子1",          "鸡腿肉80g + 竹笋"]
+  },
+  legsB: {
+    adapt: ["鸡蛋2 + 面包2片 + 苹果1", "鸡腿肉120g + 莲藕炒肉 + 土豆1", "香蕉1（练前30min）", "鸡蛋2 + 西红柿 + 面包1片"],
+    peak:  ["鸡蛋2 + 面包1片 + 苹果1", "鸡腿肉130g + 莲藕炒肉 + 土豆1", "香蕉1（练前30min）", "鸡蛋2 + 西红柿 + 玉米½根"],
+    shape: ["鸡蛋2 + 面包1片 + 苹果1", "鸡腿肉140g + 莲藕炒肉 + 玉米½根", "香蕉1（练前30min）", "鸡蛋2 + 西红柿"]
+  },
+  upperB: {
+    adapt: ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉100g + 西红柿炒蛋 + 馒头1", "苹果1（练前）", "牛肉80g + 莲藕 + 土豆½"],
+    peak:  ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉120g + 西红柿炒蛋 + 馒头1", "苹果1 + 鸡蛋1（练后）", "牛肉80g + 莲藕 + 土豆½"],
+    shape: ["燕麦片 40g + 鸡蛋2 + 橘子1", "牛肉130g + 西红柿炒蛋 + 馒头½", "苹果1 + 鸡蛋1（练后）", "牛肉80g + 莲藕"]
+  },
+  fullbody: {
+    adapt: ["鸡蛋2 + 馒头1 + 香蕉1", "鸡腿肉100g + 牛肉50g + 西红柿 + 莲藕 + 红薯1", "鸡蛋1 + 苹果1（练后）", "鸡腿肉60g + 西红柿鸡蛋汤"],
+    peak:  ["鸡蛋2 + 馒头1 + 香蕉1", "鸡腿肉120g + 牛肉50g + 西红柿 + 莲藕 + 玉米½根", "鸡蛋1 + 苹果1（练后）", "鸡腿肉80g + 西红柿鸡蛋汤"],
+    shape: ["鸡蛋2 + 馒头½ + 香蕉1", "鸡腿肉130g + 牛肉50g + 西红柿 + 莲藕 + 玉米½根", "鸡蛋1（练后）",          "鸡腿肉80g + 西红柿鸡蛋汤"]
+  },
+  rest: {
+    adapt: ["燕麦片 40g + 鸡蛋2 + 橘子1", "鸡腿肉80g + 凉拌莲藕 + 西红柿", "苹果1", "鸡蛋1 + 西红柿汤 + 玉米½根"],
+    peak:  ["燕麦片 40g + 鸡蛋2 + 橘子1", "鸡腿肉100g + 凉拌莲藕 + 西红柿", "苹果1", "鸡蛋1 + 西红柿汤 + 玉米½根"],
+    shape: ["燕麦片 40g + 鸡蛋2 + 橘子1", "鸡腿肉100g + 凉拌莲藕 + 西红柿（少油）", "苹果1", "鸡蛋1 + 西红柿汤 + 竹笋"]
+  }
+};
+
+const tips = [
+  "拍照对比 > 体重秤，每周日同光线拍一张。",
+  "训练后 30 分钟内补 25–30g 蛋白质。",
+  "嘴馋先喝一杯水，10 分钟后再决定。",
+  "力量训练决定线条，比有氧更重要。",
+  "睡够 7.5 小时，皮质醇低，腰腹不囤脂。",
+  "经期前一周强度减半，正常吃，别强撑。",
+  "跳绳日只要膝、踝、小腿不舒服，就改低冲击有氧。",
+  "一顿吃多了不补偿性饿肚子，下顿正常吃。",
+  "蛋白质 ≥110g 是塑形底线。",
+  "每组保留 2–3 次余力；全做稳了，下次再加重量或次数。"
+];
+
+const phaseLabel = { adapt: '适应期', peak: '攻坚期', shape: '塑形期' };
+const pattern = ['legs', 'upper', 'hiit', 'legs', 'upper', 'fullbody', 'rest'];
+const mealKeys = ['legsA', 'upperA', 'hiit', 'legsB', 'upperB', 'fullbody', 'rest'];
+const milestones = new Set([1, 14, 30, 42, 60]);
+const milestoneNotes = {
+   1: "起始数据：体重 / 腰围 / 臀围 / 大腿围 + 拍三角度照片，记下来。",
+  14: "阶段一复测：对比围度 + 拍照，重点看腰围。",
+  30: "月度复测：体重 + 围度 + 体脂（如有体脂秤）。",
+  42: "阶段二复测：力量是否进步？围度是否继续下降？",
+  60: "最终复测 + 对比照，按结果决定下一阶段。"
+};
+const masterChecks = [
+  { key: 'training', label: '训练完成', icon: '💪' },
+  { key: 'diet',     label: '饮食达标', icon: '🍱' },
+  { key: 'steps',    label: '轻活动 20min', icon: '👟' },
+  { key: 'sleep',    label: '睡眠 7h+', icon: '😴' },
+  { key: 'earlyBed', label: '早睡', icon: '🌙' },
+  { key: 'earlyRise', label: '早起', icon: '🌅' }
+];
+
+function getPhase(day) {
+  if (day <= 14) return 'adapt';
+  if (day <= 42) return 'peak';
+  return 'shape';
+}
+function getWorkout(day) { return pattern[(day - 1) % 7]; }
+function getMealKey(day) { return mealKeys[(day - 1) % 7]; }
+function getContent(day) {
+  const t = getWorkout(day);
+  if (t === 'rest') return workouts.rest.all;
+  return workouts[t][getPhase(day)];
+}
+function getMeals(day) { return meals[getMealKey(day)][getPhase(day)]; }
+
+//=================== STATE ===================
+const KEY = 'fit60.state.v2';
+let state = load() || { startDate: null, selectedDay: null, history: {} };
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)); }
+  catch { return null; }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+
+function getDay(day) {
+  if (!state.history[day]) {
+    const content = getContent(day);
+    state.history[day] = {
+      exercises: new Array(content.items.length).fill(false),
+      meals: [false, false, false, false],
+      training: false, diet: false, steps: false, sleep: false, earlyBed: false, earlyRise: false
+    };
+  }
+  const d = state.history[day];
+  if (d.routine && d.earlyBed === undefined && d.earlyRise === undefined) {
+    d.earlyBed = true;
+    d.earlyRise = true;
+    delete d.routine;
+    save();
+  }
+  return state.history[day];
+}
+function isComplete(day) {
+  const d = state.history[day];
+  if (!d) return false;
+  return masterChecks.every(c => d[c.key]);
+}
+
+function todayDay() {
+  if (!state.startDate) return 1;
+  const start = new Date(state.startDate + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diff = Math.floor((now - start) / 86400000) + 1;
+  if (diff < 1) return 1;
+  if (diff > 60) return 60;
+  return diff;
+}
+
+function viewDay() {
+  return state.selectedDay || todayDay();
+}
+
+//=================== RENDER ===================
+const app = document.getElementById('app');
+
+function escape(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+function render() {
+  if (!state.startDate) {
+    app.innerHTML = renderSetup();
+  } else {
+    app.innerHTML = renderMain();
+  }
+}
+
+function renderSetup() {
+  const today = new Date().toISOString().slice(0, 10);
+  return `
+    <div class="setup">
+      <h2>60天健身打卡 🏃‍♀️</h2>
+      <p>把"我要开始"变成"我已经开始"。先选一个起始日，App 会自动按天给你今天该做的训练 + 食谱。</p>
+      <div class="summary">
+        基础：身高 174 / 体重 75kg → 目标 −5~7kg<br>
+        器械：哑铃 + 跳绳（可用快走 / 原地踏步替代）<br>
+        食材：牛肉 / 鸡腿肉 / 鸡蛋 / 燕麦片 / 馒头 / 面包 / 土豆 / 红薯 / 玉米 / 莲藕 / 竹笋 / 西红柿 / 苹果 / 香蕉 / 橘子<br>
+        节奏：<b>14天适应</b> → <b>28天攻坚</b> → <b>18天塑形</b>
+      </div>
+      <label for="startDate">起始日（Day 1）</label>
+      <input id="startDate" type="date" value="${today}" max="${today}">
+      <button class="start-btn" data-action="start">开始 60 天</button>
+    </div>`;
+}
+
+function renderMain() {
+  const day = viewDay();
+  const today = todayDay();
+  const phase = getPhase(day);
+  const content = getContent(day);
+  const mealList = getMeals(day);
+  const d = getDay(day);
+  const isMs = milestones.has(day);
+  const tip = isMs ? milestoneNotes[day] : tips[(day - 1) % tips.length];
+  const completedCount = Object.keys(state.history).filter(k => isComplete(+k)).length;
+  const progressPct = Math.round((completedCount / 60) * 100);
+  const isToday = day === today;
+  const isViewingToday = state.selectedDay === null || state.selectedDay === today;
+
+  return `
+    <div class="head">
+      <h1>60天健身打卡</h1>
+      <button class="gear" data-action="settings" aria-label="设置">⚙</button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span><b>Day ${today}</b> / 60 · ${phaseLabel[getPhase(today)]}</span>
+        <span>${completedCount} 天达标 · ${progressPct}%</span>
+      </div>
+      <div class="bar"><i style="width:${progressPct}%"></i></div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="day-info">
+          <span class="day-num">Day ${day}</span>
+          <span class="day-sub">${isToday ? '今日' : (day < today ? '已过' : '未到')}</span>
+        </div>
+        <span class="pill ${isMs ? 'milestone' : phase}">
+          ${isMs ? '★ 复测日' : phaseLabel[phase]}
+        </span>
+      </div>
+
+      <div class="title-line">${escape(content.title)}</div>
+
+      <div class="section-title"><span class="ic">🏋️</span>训练</div>
+      <ul class="checklist" data-list="exercises">
+        ${content.items.map((item, i) => `
+          <li class="${d.exercises[i] ? 'done' : ''}" data-action="ex" data-idx="${i}">
+            <span class="box">✓</span>
+            <span class="lbl">${escape(item)}</span>
+          </li>
+        `).join('')}
+      </ul>
+
+      <div class="section-title"><span class="ic">🍱</span>食谱</div>
+      <ul class="checklist" data-list="meals">
+        ${['早','午','加','晚'].map((mlbl, i) => `
+          <li class="${d.meals[i] ? 'done' : ''}" data-action="meal" data-idx="${i}">
+            <span class="box">✓</span>
+            <span class="lbl"><span class="meal-prefix">${mlbl}</span>${escape(mealList[i])}</span>
+          </li>
+        `).join('')}
+      </ul>
+
+      <div class="tip ${isMs ? 'milestone' : ''}">
+        💡 ${escape(tip)}
+      </div>
+
+      <div class="section-title"><span class="ic">✅</span>今日打卡</div>
+      <div class="master">
+        ${masterChecks.map(c => `
+          <button class="${d[c.key] ? 'done' : ''}" data-action="check" data-key="${c.key}">
+            <span class="ic">${c.icon}</span>${c.label}
+          </button>
+        `).join('')}
+      </div>
+
+      <button class="complete-btn ${isComplete(day) ? 'done' : ''}"
+              data-action="complete">
+        ${isComplete(day) ? '✓ 今日已完成' : '一键完成今日打卡'}
+      </button>
+    </div>
+
+    <div class="cal-head">
+      <h2>${isViewingToday ? '60天进度' : `查看 Day ${day} · `}<a href="#" data-action="back-today" style="color:var(--accent); text-decoration:none; font-weight:600; ${isViewingToday ? 'display:none' : ''}">回到今日</a></h2>
+      <div class="legend">
+        <span><i style="background:var(--adapt)"></i>适应</span>
+        <span><i style="background:var(--peak)"></i>攻坚</span>
+        <span><i style="background:var(--shape)"></i>塑形</span>
+      </div>
+    </div>
+
+    <div class="calendar">
+      ${Array.from({length: 60}, (_, i) => i + 1).map(d => {
+        const ph = getPhase(d);
+        const wo = getWorkout(d);
+        const cls = [
+          'day-cell',
+          wo === 'rest' ? 'rest' : ph,
+          isComplete(d) ? 'complete' : '',
+          d === today ? 'today' : '',
+          d === viewDay() && d !== today ? 'selected' : '',
+          d > today ? 'future' : ''
+        ].filter(Boolean).join(' ');
+        return `<div class="${cls}" data-action="goto" data-day="${d}">
+          ${milestones.has(d) ? '<span class="ms-star">★</span>' : ''}
+          ${d}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <p class="foot">本地存储 · 数据不离开你的设备 · v2</p>
+  `;
+}
+
+//=================== EVENTS ===================
+function onClick(e) {
+  const t = e.target.closest('[data-action]');
+  if (!t) return;
+  const action = t.dataset.action;
+  const day = viewDay();
+
+  if (action === 'start') {
+    const v = document.getElementById('startDate').value;
+    if (!v) return;
+    state.startDate = v;
+    state.selectedDay = null;
+    save();
+    render();
+    return;
+  }
+  if (action === 'ex') {
+    const i = +t.dataset.idx;
+    const d = getDay(day);
+    d.exercises[i] = !d.exercises[i];
+    save();
+    t.classList.toggle('done');
+    return;
+  }
+  if (action === 'meal') {
+    const i = +t.dataset.idx;
+    const d = getDay(day);
+    d.meals[i] = !d.meals[i];
+    save();
+    t.classList.toggle('done');
+    return;
+  }
+  if (action === 'check') {
+    const key = t.dataset.key;
+    const d = getDay(day);
+    d[key] = !d[key];
+    save();
+    render();
+    return;
+  }
+  if (action === 'complete') {
+    const d = getDay(day);
+    const allOn = masterChecks.every(c => d[c.key]);
+    masterChecks.forEach(c => { d[c.key] = !allOn; });
+    save();
+    render();
+    return;
+  }
+  if (action === 'goto') {
+    const d = +t.dataset.day;
+    state.selectedDay = (d === todayDay()) ? null : d;
+    save();
+    render();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    return;
+  }
+  if (action === 'back-today') {
+    e.preventDefault();
+    state.selectedDay = null;
+    save();
+    render();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    return;
+  }
+  if (action === 'settings') {
+    openSettings();
+    return;
+  }
+  if (action === 'change-start') {
+    const v = document.getElementById('newStart').value;
+    if (!v) return;
+    state.startDate = v;
+    state.selectedDay = null;
+    save();
+    closeModal();
+    render();
+    return;
+  }
+  if (action === 'reset') {
+    if (confirm('确定要清空所有打卡数据并重新开始吗？此操作无法撤销。')) {
+      localStorage.removeItem(KEY);
+      state = { startDate: null, selectedDay: null, history: {} };
+      closeModal();
+      render();
+    }
+    return;
+  }
+  if (action === 'close-modal') {
+    closeModal();
+    return;
+  }
+}
+
+function openSettings() {
+  const m = document.createElement('div');
+  m.className = 'modal-bg';
+  m.id = 'modalBg';
+  m.innerHTML = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <h3>设置</h3>
+      <p>修改起始日</p>
+      <input id="newStart" type="date" value="${state.startDate}">
+      <div class="row">
+        <button data-action="change-start" class="primary">保存日期</button>
+      </div>
+      <p style="margin-top:18px">危险操作</p>
+      <div class="row">
+        <button data-action="reset" class="danger">清空所有数据</button>
+      </div>
+      <div class="row">
+        <button data-action="close-modal">关闭</button>
+      </div>
+    </div>`;
+  m.addEventListener('click', () => closeModal());
+  document.body.appendChild(m);
+}
+function closeModal() {
+  const m = document.getElementById('modalBg');
+  if (m) m.remove();
+}
+
+document.addEventListener('click', onClick);
+
+//=================== INIT ===================
+render();
+</script>
+</body>
+</html>
