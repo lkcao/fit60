@@ -283,6 +283,42 @@
 </style>
 </head>
 <body>
+<div id="lock" style="position:fixed;inset:0;background:#1f1d1a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;">
+  <div style="font-size:44px;margin-bottom:18px;">🔒</div>
+  <div style="font-size:13px;color:#999;margin-bottom:14px;letter-spacing:1px;">输入 4 位 PIN</div>
+  <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4"
+         style="width:160px;padding:14px;text-align:center;font-size:22px;letter-spacing:8px;background:#2a2823;border:1px solid #444;color:#fff;border-radius:10px;outline:none;">
+  <div id="pinErr" style="color:#e85a4f;font-size:12px;margin-top:10px;height:14px;"></div>
+</div>
+<script>
+(async function(){
+  const HASH = 'ed946f65d2c785d90e827c5ffd879ce3b49c68d4c88013074176a7e73bc58bcf';
+  if (sessionStorage.getItem('fit60.unlocked') === '1') {
+    document.getElementById('lock').remove();
+    return;
+  }
+  async function sha256(s){
+    const buf = new TextEncoder().encode(s);
+    const h = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const input = document.getElementById('pin');
+  const err = document.getElementById('pinErr');
+  setTimeout(()=>input.focus(), 100);
+  input.addEventListener('input', async () => {
+    err.textContent = '';
+    if (input.value.length === 4) {
+      if (await sha256(input.value) === HASH) {
+        sessionStorage.setItem('fit60.unlocked','1');
+        document.getElementById('lock').remove();
+      } else {
+        err.textContent = 'PIN 错误';
+        input.value = '';
+      }
+    }
+  });
+})();
+</script>
 <div id="app"></div>
 
 <script>
