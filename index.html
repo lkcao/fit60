@@ -291,24 +291,19 @@
   <div id="pinErr" style="color:#e85a4f;font-size:12px;margin-top:10px;height:14px;"></div>
 </div>
 <script>
-(async function(){
-  const HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
+(function(){
+  const PIN = '1234';
   if (sessionStorage.getItem('fit60.unlocked') === '1') {
     document.getElementById('lock').remove();
     return;
   }
-  async function sha256(s){
-    const buf = new TextEncoder().encode(s);
-    const h = await crypto.subtle.digest('SHA-256', buf);
-    return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('');
-  }
   const input = document.getElementById('pin');
   const err = document.getElementById('pinErr');
-  setTimeout(()=>input.focus(), 100);
-  input.addEventListener('input', async () => {
+  setTimeout(() => input.focus(), 100);
+  input.addEventListener('input', () => {
     err.textContent = '';
     if (input.value.length === 4) {
-      if (await sha256(input.value) === HASH) {
+      if (input.value === PIN) {
         sessionStorage.setItem('fit60.unlocked','1');
         document.getElementById('lock').remove();
       } else {
